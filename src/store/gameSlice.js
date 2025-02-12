@@ -1,11 +1,24 @@
 import { createSlice } from "@reduxjs/toolkit";
 
+const COLORS = ["red", "blue", "green", "yellow", "purple", "orange"];
+
+// Shuffle array helper function
+const shuffleArray = (array) => {
+  const newArray = [...array];
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+  }
+  return newArray;
+};
+
 const initialState = {
   board: Array(6)
     .fill(null)
     .map(() => Array(6).fill(null)),
-  currentColor: 0,
-  colors: ["red", "blue", "green", "yellow", "purple", "orange"],
+  topPieces: shuffleArray([...Array(6).keys()]), // Indices of colors
+  selectedPiece: null, // Index in topPieces
+  colors: COLORS,
   fallingPiece: null, // { row, col, color }
 };
 
@@ -15,24 +28,34 @@ const findLowestEmptyRow = (board, col) => {
       return row;
     }
   }
-  return -1; // Column is full
+  return -1;
 };
 
 export const gameSlice = createSlice({
   name: "game",
   initialState,
   reducers: {
+    selectPiece: (state, action) => {
+      state.selectedPiece = action.payload;
+    },
     placePiece: (state, action) => {
       const { col } = action.payload;
-      const row = findLowestEmptyRow(state.board, col);
+      if (state.selectedPiece === null) return;
 
+      const row = findLowestEmptyRow(state.board, col);
       if (row !== -1) {
+        const colorIndex = state.topPieces[state.selectedPiece];
         state.fallingPiece = {
           targetRow: row,
           col,
-          color: state.currentColor,
+          color: colorIndex,
         };
-        state.currentColor = (state.currentColor + 1) % state.colors.length;
+
+        // Replace the used piece with a random color
+        state.topPieces[state.selectedPiece] = Math.floor(
+          Math.random() * COLORS.length
+        );
+        state.selectedPiece = null;
       }
     },
     completeFall: (state) => {
@@ -46,11 +69,13 @@ export const gameSlice = createSlice({
       state.board = Array(6)
         .fill(null)
         .map(() => Array(6).fill(null));
-      state.currentColor = 0;
+      state.topPieces = shuffleArray([...Array(6).keys()]);
+      state.selectedPiece = null;
       state.fallingPiece = null;
     },
   },
 });
 
-export const { placePiece, completeFall, resetGame } = gameSlice.actions;
+export const { selectPiece, placePiece, completeFall, resetGame } =
+  gameSlice.actions;
 export default gameSlice.reducer;
